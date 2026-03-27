@@ -1,3 +1,8 @@
+import os
+# Force PyTorch to use only 1 CPU thread and no caching to save RAM
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -7,21 +12,18 @@ from transformers import pipeline
 
 app = FastAPI()
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# 1. ADD THIS: A simple route so Render knows the server is "Alive"
+# Add a route that doesn't use the AI at all for Render's health check
 @app.get("/")
 def health_check():
-    return {"status": "online"}
+    return {"status": "alive"}
 
-print("🚀 Loading Lightweight AI Model...")
-# 2. OPTIMIZE: Use 'distilbart' - it uses 70% less memory than the large version
-classifier = pipeline("zero-shot-classification", model="valhalla/distilbart-mnli-12-3")
+print("🚀 Loading Ultra-Lightweight AI...")
+# Use the smallest possible classification model (only ~80MB)
+classifier = pipeline(
+    "zero-shot-classification", 
+    model="cross-encoder/nli-distilroberta-base",
+    model_kwargs={"low_cpu_mem_usage": True} # This is the magic line for Render
+)
 
 NEWS_API_KEY = "77d006c92aeb410bab7469ee777ceb9c" 
 
